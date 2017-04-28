@@ -1,8 +1,11 @@
 <?php
 
-namespace applications\adapt_video{
+namespace adapt\adapt_video{
     
-    class controller extends \frameworks\adapt\controller{
+    /* Prevent direct access */
+    defined('ADAPT_STARTED') or die;
+    
+    class controller extends \adapt\controller{
         
     }
     

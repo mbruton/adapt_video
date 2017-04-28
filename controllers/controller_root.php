@@ -1,6 +1,6 @@
 <?php
 
-namespace applications\adapt_video{
+namespace adapt\adapt_video{
     
     /* Prevent direct access */
     defined('ADAPT_STARTED') or die;
@@ -10,8 +10,27 @@ namespace applications\adapt_video{
         protected $_container;
         
         public function __construct(){
+            $this->_container =  new html_div(array('class' => 'container'));
+            
             parent::__construct();
             
+            $header = new html_header();
+            
+            $navbar = new \bootstrap\views\view_navbar();
+            $navbar->static_top = true;
+            
+            $navbar->brand = 'adapt video';
+            $navbar->brand_url = "/";
+            
+            $header->add($navbar);
+            
+            $this->view->add($header);
+            
+            $this->view->add($this->_container);
+        }
+        
+        public function add_view($view){
+            $this->_container->add($view);
         }
         
         /*
@@ -23,100 +42,45 @@ namespace applications\adapt_video{
          * Views
          */
         public function view_default(){
-            $p = new \extensions\ffmpeg_wrapper\ffprobe();
+            $row = new html_div(array('class' => 'row'));
+            $this->add_view($row);
+            $row->add(new html_h1('Adapt video'));
             
-            $results = $p->probe("/home/matt/Juno.2007.1080p.BluRay.x264.DTS-WiKi.mkv");
-            //$results = $p->probe("/home/matt/The.Hills.Have.Eyes.2006.UNRATED.BrRip.600MB.mkv");
-            
-            $this->add_view(new html_h1('Results'));
-            $this->add_view(new html_h2('Container'));
-            
-            $data = array(
-                array(
-                    'Format' => $results['container']['format_name'],
-                    'duration' => $results['container']['duration'],
-                    'size' => $results['container']['size'],
-                    'bit_rate' => $results['container']['bit_rate'],
-                    'streams' => $results['container']['nb_streams']
-                )
-            );
-            
-            $table = new \frameworks\adapt\view_table($data);
-            
-            $this->add_view($table);
-            
-            $this->add_view(new html_h2('Streams'));
-            
-            $data = array();
-            
-            foreach($results['streams'] as $stream){
-                $frame_rate = $stream['r_frame_rate'];
-                if ($frame_rate != '0/0'){
-                    $parts = explode("/", $frame_rate);
-                    $parts[0] = intval($parts[0]);
-                    $parts[1] = intval($parts[1]);
-                    
-                    if ($parts[0] > 0 && $parts[1] > 0){
-                        $frame_rate = $parts[0] / $parts[1];
-                    }
-                }else{
-                    $frame_rate = '';
-                }
-                
-                $data[] = array(
-                    'Type' => $stream['codec_type'],
-                    'Codec' => $stream['codec_name'],
-                    'Profile' => $stream['profile'],
-                    'Bit Rate' => $stream['bit_rate'],
-                    'Dimentions' => $stream['width'] ? $stream['width'] . ' x ' . $stream['height'] : '',
-                    'Aspect Ratio' => $stream['display_aspect_ratio'],
-                    'Frame rate' => $frame_rate,
-                    'Sample Rate' => $stream['sample_rate'],
-                    'Channels' => $stream['channels'],
-                    'Channel layout' => $stream['channel_layout'],
-                    'Language' => $stream['TAG:language']
-                    
-                );
-            }
-            
-            $table = new \frameworks\adapt\view_table($data);
-            
-            $this->add_view($table);
-            
-            $this->add_view(new html_pre(print_r($p->probe("/home/matt/The.Hills.Have.Eyes.2006.UNRATED.BrRip.600MB.mkv"), true)));
+            $video = new html_video(array('class' => 'video-js vjs-16-9 vjs-default-skin', 'controls' => 'true', 'preload' => 'auto', 'width' => '740', 'height' => '405'));
+            $row->add($video);
+            //$video->add(new html_source(array('src' => '/adapt/store/public/gom6-3.540p.mp4', 'type' => 'video/mp4')));
         }
         
-        public function view_ffmpeg_config(){
-            $this->add_view(new html_h1('ffmpeg config'));
+        public function view_test(){
+            $probe = new \adapt\video\ffmpeg_wrapper\ffprobe();
             
-            $p = new \extensions\ffmpeg_wrapper\ffprobe();
-            $formats = $p->get_formats();
-            $data = array();
-            foreach($formats as $format){
-                $data[] = array(
-                    'Type' => implode(", ", $format['type']),
-                    'Description' => $format['description'],
-                    'Mixing Supported' => $format['mixing_suppored'],
-                    'Demuxing Supported' => $format['demuxing_supported']
-                );
-            }
-            
-            $this->add_view(
-                array(
-                    new html_h2('Supported formats'),
-                    new \frameworks\adapt\view_table($data),
-                    new html_h2('Supported codecs'),
-                    new \frameworks\adapt\view_table($p->get_codecs()),
-                    new html_h2('Supported decoders'),
-                    new \frameworks\adapt\view_table($p->get_decoders()),
-                    new html_h2('Supported encoders'),
-                    new \frameworks\adapt\view_table($p->get_encoders())
-                )
-            );
-            
+            $this->add_view(new html_pre(print_r($probe->get_encoders(), true)));
+        }
+        
+        public function view_file_test(){
+            $storage = new \adapt\storage_database\storage_database();
+            //$storage->set("foo", "Hello world");
+            $storage->set_by_file("sab", "/home/matt/sab_export_20151020.csv");
+            $this->add_view(new html_pre(print_r($storage->errors(), true)));
             
         }
         
+        public function view_repo_test(){
+            $repo_url = $this->setting('repository.url');
+            $url = $repo_url[0];
+            
+            $repo = new \adapt\repository($url);
+            
+            if ($repo->has('adapt')){
+                $this->add_view('Has adapt', '2.0.1');
+            }else{
+                $this->add_view('Couldnt find adapt');
+                $this->add_view(new html_pre(print_r($repo->errors(), true)));
+            }
+            
+            //$this->add_view($repo->get('adapt', '2.0.0'));
+            
+        }
     }
     
 }
